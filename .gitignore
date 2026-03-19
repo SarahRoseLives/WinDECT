@@ -1,0 +1,24 @@
+# Build output
+build/
+*.obj
+*.pdb
+*.ilk
+*.exp
+
+# DLL sources (user-provided, not redistributable)
+dlls/
+
+# CMake cache
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# OS
+Thumbs.db
+.DS_Store

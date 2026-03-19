@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>WinDECT - DECT6.0 Decoder/Transmitter for Windows</title>
+    <style>
+        body {
+            background-color: #000080; /* Classic Navy */
+            background-image: url('https://www.transparenttextures.com/patterns/carbon-fibre.png');
+            color: #ffffff;
+            font-family: "Verdana", "Arial", sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* The 800x600 centered container */
+        #main-container {
+            width: 850px;
+            margin: 0 auto;
+            background-color: #c0c0c0; /* Classic Windows Grey */
+            border: 4px ridge #eeeeee;
+            color: #000000;
+        }
+
+        header {
+            background: linear-gradient(90deg, #000040, #0000ff);
+            padding: 15px;
+            text-align: center;
+            border-bottom: 2px solid #000000;
+        }
+
+        h1 {
+            margin: 0;
+            color: #ffff00;
+            font-style: italic;
+            text-shadow: 2px 2px #000000;
+            font-size: 32px;
+        }
+
+        .marquee-box {
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            padding: 2px;
+            border: 1px inset #fff;
+        }
+
+        #content-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #sidebar {
+            width: 180px;
+            vertical-align: top;
+            background-color: #808080;
+            padding: 10px;
+            border-right: 2px groove #fff;
+        }
+
+        .nav-button {
+            display: block;
+            width: 150px;
+            background: #c0c0c0;
+            border: 2px outset #ffffff;
+            color: #000;
+            text-align: center;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 12px;
+            padding: 5px;
+            margin-bottom: 8px;
+        }
+
+        .nav-button:active {
+            border: 2px inset #ffffff;
+        }
+
+        #main-body {
+            padding: 20px;
+            background-color: #ffffff;
+            vertical-align: top;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .section-header {
+            background-color: #000080;
+            color: white;
+            padding: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 15px;
+            margin-bottom: 10px;
+        }
+
+        .tech-table {
+            width: 100%;
+            border: 1px solid #000;
+            font-size: 12px;
+        }
+
+        .tech-table th {
+            background-color: #d3d3d3;
+            border: 1px solid #000;
+            padding: 4px;
+        }
+
+        .tech-table td {
+            border: 1px solid #808080;
+            padding: 4px;
+        }
+
+        .blink {
+            animation: blinker 1s linear infinite;
+            color: red;
+            font-weight: bold;
+        }
+
+        @keyframes blinker {
+            50% { opacity: 0; }
+        }
+
+        footer {
+            text-align: center;
+            padding: 10px;
+            font-size: 10px;
+            background-color: #c0c0c0;
+            border-top: 2px groove #ffffff;
+        }
+
+        .counter {
+            background: #000;
+            color: #0f0;
+            padding: 3px 6px;
+            font-family: 'Courier New', Courier, monospace;
+            border: 1px inset #fff;
+            font-weight: bold;
+        }
+
+        .badge {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="main-container">
+    <header>
+        <h1>WinDECT v1.2.0 - The Ultimate DECT 6.0 Tool</h1>
+        <div class="marquee-box">
+            <marquee scrollamount="4">*** LATEST NEWS: Added support for LimeSDR-Mini! *** DSC Encryption weakness research modules updated! *** Support our project on GitHub! ***</marquee>
+        </div>
+    </header>
+
+    <table id="content-table">
+        <tr>
+            <!-- Left Sidebar Navigation -->
+            <td id="sidebar">
+                <center>
+                    <img src="https://img.icons8.com/color/48/000000/tower.png" alt="Tower Icon"><br>
+                    <small><b>Navigation</b></small>
+                </center>
+                <hr>
+                <a href="#" class="nav-button">Home Page</a>
+                <a href="#" class="nav-button">Download EXE</a>
+                <a href="#" class="nav-button">Documentation</a>
+                <a href="#" class="nav-button">Source Code</a>
+                <a href="#" class="nav-button">RF Gallery</a>
+                <a href="#" class="nav-button">Contact Me</a>
+                <hr>
+                <center>
+                    <img src="https://web.archive.org/web/20090829153513/http://geocities.com/CollegePark/6174/images/construction.gif" width="100" alt="Under Construction"><br>
+                    <small>Site last updated:<br>March 19, 2026</small>
+                </center>
+            </td>
+
+            <!-- Main Page Content -->
+            <td id="main-body">
+                <div class="section-header">What is WinDECT?</div>
+                <p>
+                    Welcome to the <b>WinDECT</b> project homepage. WinDECT is a high-performance, Windows-optimized Software Defined Radio (SDR) application designed specifically for the <b>DECT 6.0</b> (1920-1930 MHz) frequency band.
+                </p>
+                <p>
+                    Unlike Linux-based tools that require complex GNURadio installs, WinDECT is a <b>native C++</b> application using the DirectShow/WinUSB stack for maximum throughput and minimum latency.
+                </p>
+
+                <div class="section-header">Core Features <span class="blink">NEW!!</span></div>
+                <ul>
+                    <li><b>Full-Duplex Decoding:</b> Listen to both FP (Fixed Part) and PP (Portable Part) streams simultaneously.</li>
+                    <li><b>Packet Injection:</b> Test base station security by crafting custom NWK-layer packets.</li>
+                    <li><b>Real-time GMSK Demodulation:</b> Optimized for Intel Core 2 Duo and higher.</li>
+                    <li><b>DSC Audit Tool:</b> Automatically identify unencrypted baby monitors and older cordless handsets.</li>
+                </ul>
+
+                <div class="section-header">Hardware Compatibility Matrix</div>
+                <table class="tech-table">
+                    <tr>
+                        <th>Hardware</th>
+                        <th>Receive (RX)</th>
+                        <th>Transmit (TX)</th>
+                        <th>Notes</th>
+                    </tr>
+                    <tr>
+                        <td>HackRF One</td>
+                        <td align="center">✅</td>
+                        <td align="center">✅</td>
+                        <td>Best for wideband search</td>
+                    </tr>
+                    <tr>
+                        <td>LimeSDR Mini</td>
+                        <td align="center">✅</td>
+                        <td align="center">✅</td>
+                        <td>High stability 1.9GHz</td>
+                    </tr>
+                    <tr>
+                        <td>RTL-SDR (v3)</td>
+                        <td align="center">✅</td>
+                        <td align="center">❌</td>
+                        <td>Needs E4000 tuner chip</td>
+                    </tr>
+                    <tr>
+                        <td>PlutoSDR</td>
+                        <td align="center">✅</td>
+                        <td align="center">✅</td>
+                        <td>Experimental driver</td>
+                    </tr>
+                </table>
+
+                <div class="section-header">Technical Details</div>
+                <p>
+                    DECT 6.0 uses 10 carrier frequencies in the US, with TDMA time slots (24 per frame). WinDECT handles the synchronization word (0xE98A) detection in hardware where supported, or via our <b>SuperSync™</b> software algorithm.
+                </p>
+                <center>
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/SDR_Waterfall.png/300px-SDR_Waterfall.png" border="1" alt="Waterfall Display"><br>
+                    <i>Fig 1. Typical DECT burst pattern in the 1.9GHz band.</i>
+                </center>
+            </td>
+        </tr>
+    </table>
+
+    <footer>
+        <div class="badge">
+            <img src="https://img.icons8.com/color/48/000000/internet-explorer.png" width="20"> Best viewed in <b>Internet Explorer 6.0</b> at 1024x768 resolution<br>
+            <img src="https://www.w3.org/Icons/valid-html401" alt="Valid HTML" height="15">
+        </div>
+        <p>
+            You are visitor number: <span class="counter">0004291</span> since Feb 2026.
+        </p>
+        <p>Copyright &copy; 2026 WinDECT Research Labs. All Rights Reserved. No illegal eavesdropping!</p>
+    </footer>
+</div>
+
+</body>
+</html>
