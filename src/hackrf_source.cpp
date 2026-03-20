@@ -3,6 +3,8 @@
 #include <cstdio>
 #include <cstring>
 #include <algorithm>
+#include <chrono>
+#include <thread>
 
 namespace windect {
 
@@ -95,9 +97,13 @@ bool HackrfSource::set_sample_rate(uint32_t sample_rate) {
         last_error_ = hackrf_error_name(static_cast<hackrf_error>(r));
         return false;
     }
-    // Baseband filter: pick closest to occupied bandwidth (~1.4 MHz).
-    // hackrf_set_baseband_filter_bandwidth takes Hz; rounds to nearest valid value.
-    hackrf_set_baseband_filter_bandwidth(static_cast<hackrf_device*>(device_), 1'750'000);
+    // Baseband filter: set to ~75% of sample rate so aliasing is avoided
+    // while maximising useful bandwidth.  hackrf_compute_baseband_filter_bw()
+    // rounds down to the nearest valid HackRF bandwidth value.
+    uint32_t bw = hackrf_compute_baseband_filter_bw(
+        static_cast<uint32_t>(sample_rate * 3 / 4));
+    hackrf_set_baseband_filter_bandwidth(
+        static_cast<hackrf_device*>(device_), bw);
     return true;
 }
 
@@ -140,7 +146,16 @@ bool HackrfSource::set_amp_enable(bool enable) {
 int HackrfSource::rx_callback(hackrf_transfer* transfer) {
     HackrfSource* self = static_cast<HackrfSource*>(transfer->rx_ctx);
 
-    if (!self->streaming_) return 0;
+    // Fast path: already stopped — no work needed
+    if (!self->streaming_.load(std::memory_order_acquire)) return 0;
+
+    // Hold the run-mutex for the duration of the user callback.
+    // stop() acquires this after hackrf_stop_rx() to wait for us to finish.
+    std::lock_guard<std::mutex> lock(self->callback_run_mutex_);
+
+    // Re-check inside the lock (stop() may have set streaming_=false while
+    // we were waiting for the lock)
+    if (!self->streaming_.load(std::memory_order_acquire)) return 0;
 
     size_t n_samples = transfer->valid_length / 2; // 2 bytes (I+Q) per sample
 
@@ -172,11 +187,31 @@ bool HackrfSource::start(IQCallback cb) {
 
 bool HackrfSource::stop() {
     if (!streaming_) return true;
-    streaming_ = false;
+    streaming_.store(false, std::memory_order_release);
     if (device_) {
         hackrf_stop_rx(static_cast<hackrf_device*>(device_));
     }
+    // Wait for any callback that was already past the streaming_ check to
+    // finish executing.  Once we acquire this mutex, we know the callback
+    // thread has exited the user callback — safe for the caller to destroy
+    // whatever the callback was pointing at.
+    std::lock_guard<std::mutex> lock(callback_run_mutex_);
     return true;
+}
+
+bool HackrfSource::wait_idle(int timeout_ms) noexcept {
+    if (!device_) return true;
+    using namespace std::chrono;
+    const auto deadline = steady_clock::now() + milliseconds(timeout_ms);
+    while (steady_clock::now() < deadline) {
+        // hackrf_is_streaming returns HACKRF_TRUE (1) while the USB transfer
+        // thread is alive; anything else means it has stopped.
+        if (hackrf_is_streaming(static_cast<hackrf_device*>(device_)) != HACKRF_TRUE)
+            return true;
+        std::this_thread::sleep_for(milliseconds(10));
+    }
+    last_error_ = "Timed out waiting for device to become idle";
+    return false;
 }
 
 bool HackrfSource::is_streaming() const {

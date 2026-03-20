@@ -1,5 +1,6 @@
 #pragma once
 #include "packet_receiver.h"
+#include "g72x.h"
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -14,8 +15,10 @@ struct PartInfo {
     bool     voice_present;
     bool     part_id_valid;
 
-    uint64_t packets_ok;      // A-field CRC passes
-    uint64_t packets_bad_crc; // A-field CRC failures
+    uint64_t packets_ok;       // A-field CRC passes
+    uint64_t packets_bad_crc;  // A-field CRC failures
+    uint64_t voice_frames_ok;  // B-field voice frames decoded (X-CRC pass)
+    uint64_t voice_xcrc_fail;  // B-field X-CRC failures (comfort noise inserted)
 
     std::string part_id_hex() const;
     std::string type_str()    const { return (type == PartType::RFP) ? "RFP" : "PP"; }
@@ -24,18 +27,23 @@ struct PartInfo {
 // Callback invoked whenever the parts list changes (new part / voice change)
 using PartCallback = std::function<void(const PartInfo parts[], int count)>;
 
+// Callback invoked with decoded 16-bit PCM audio (80 samples = 10 ms at 8 kHz).
+// G.721 ADPCM decoding, gap filling, and X-CRC error concealment are all
+// handled internally — the caller just receives ready-to-play PCM.
+using VoiceCallback = std::function<void(int rx_id, const int16_t* pcm, size_t count)>;
+
 // PacketDecoder
 // =============
 // Ported from gr-dect2 packet_decoder_impl.cc (Pavel Yazev, GPLv3).
 //
 // Validates A-field CRC (RCRC-16), extracts Part ID and voice presence,
-// tracks pairing of RFP/PP, and descrambles the B-field for voice output.
-// For Phase 1 (scanning) we focus on detection — A-field decode, CRC validation,
-// and part identification. B-field voice output is prepared but not yet routed.
+// tracks pairing of RFP/PP, and decodes the B-field voice data through
+// G.721 ADPCM to produce 16-bit PCM audio output.
 
 class PacketDecoder {
 public:
-    explicit PacketDecoder(PartCallback on_update = nullptr);
+    explicit PacketDecoder(PartCallback on_update = nullptr,
+                           VoiceCallback on_voice = nullptr);
 
     // Feed a received packet from PacketReceiver
     void process_packet(const ReceivedPacket& pkt) noexcept;
@@ -59,25 +67,29 @@ private:
                            uint8_t*       nibbles_out, // 80 nibbles (4-bit values)
                            uint8_t        frame_number) noexcept;
 
-    // ── A-field decode ────────────────────────────────────────────────────
-    // Returns true if CRC passes.
+    // ── A-field decode — returns true if CRC passes ───────────────────────
     bool decode_afield(const uint8_t* bits, int rx_id) noexcept;
+
+    // ── B-field voice decode — descrambles, decodes G.721, emits PCM ──────
+    void decode_bfield(const uint8_t* bits, int rx_id) noexcept;
 
     // ── part bookkeeping ──────────────────────────────────────────────────
     struct PartState {
-        bool     active         = false;
-        bool     voice_present  = false;
-        bool     part_id_rcvd   = false;
-        bool     qt_rcvd        = false;
-        bool     log_dirty      = false;
-        bool     rfp_fn_cor     = false;
-        uint8_t  frame_number   = 0;
-        uint64_t rx_seq         = 0;
-        uint8_t  part_id[5]     = {};
-        PartType type           = PartType::RFP;
-        uint64_t packet_cnt     = 0;
-        uint64_t bad_crc_cnt    = 0;
-        int      pair_rx_id     = -1; // -1 = no pair
+        bool       active         = false;
+        bool       voice_present  = false;
+        bool       part_id_rcvd   = false;
+        bool       qt_rcvd        = false;
+        bool       log_dirty      = false;
+        uint8_t    frame_number   = 0;
+        uint64_t   rx_seq         = 0;
+        uint8_t    part_id[5]     = {};
+        PartType   type           = PartType::RFP;
+        uint64_t   packet_cnt     = 0;
+        uint64_t   bad_crc_cnt    = 0;
+        uint64_t   voice_frames_ok  = 0;
+        uint64_t   voice_xcrc_fail  = 0;
+        int        pair_rx_id     = -1; // -1 = no pair
+        g72x_state g721_state     = {}; // per-part G.721 ADPCM decoder state
     };
 
     PartState parts_[MAX_PARTS];
@@ -86,7 +98,8 @@ private:
     void try_pair(int rx_id) noexcept;
     void publish_update() noexcept;
 
-    PartCallback on_update_;
+    PartCallback  on_update_;
+    VoiceCallback on_voice_;
 };
 
 } // namespace windect

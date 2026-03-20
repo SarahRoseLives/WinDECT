@@ -5,6 +5,7 @@
 #include <functional>
 #include <array>
 #include <atomic>
+#include <mutex>
 #include <thread>
 #include <vector>
 #include <complex>
@@ -53,6 +54,11 @@ public:
     bool start(IQCallback cb);
     bool stop();
 
+    // Block until the HackRF hardware has fully stopped streaming.
+    // Call after stop() before reconfiguring (set_freq / set_sample_rate).
+    // Returns false if the device does not become idle within timeout_ms.
+    bool wait_idle(int timeout_ms = 2000) noexcept;
+
     bool is_streaming() const;
     const char* last_error() const { return last_error_; }
 
@@ -64,6 +70,11 @@ private:
     IQCallback callback_;
     std::atomic<bool> streaming_;
     const char* last_error_;
+
+    // Held by the callback thread while the callback is executing.
+    // stop() acquires this after hackrf_stop_rx() to guarantee no callback
+    // is still running before we return — safe to destroy the IQ sink.
+    std::mutex callback_run_mutex_;
 
     // Conversion scratch buffer — reused across callbacks to avoid alloc
     std::vector<std::complex<float>> conv_buf_;

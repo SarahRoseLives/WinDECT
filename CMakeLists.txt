@@ -32,7 +32,13 @@ add_executable(windect
     src/hackrf_source.cpp
     src/packet_receiver.cpp
     src/packet_decoder.cpp
+    src/wideband_monitor.cpp
+    src/g72x.c
+    src/audio_out.cpp
 )
+
+# g72x.c is a plain C file — tell CMake to compile it as C, not C++
+set_source_files_properties(src/g72x.c PROPERTIES LANGUAGE C)
 
 target_include_directories(windect PRIVATE
     ${HACKRF_INCLUDE_DIR}
