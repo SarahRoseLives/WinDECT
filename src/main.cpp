@@ -57,6 +57,13 @@ struct NarrowCtx {
     PacketDecoder  decoder;
     std::atomic<int64_t> last_voice_ms{0};
 
+    // Voice mixing: RFP and PP each emit 80 samples per 10 ms DECT frame.
+    // Without mixing both streams are pushed independently, filling the ring
+    // at 2× the drain rate and causing choppy audio.  We hold the first
+    // arrival and mix the second in before flushing — same as DeDECTive.
+    int16_t mix_frame[80]  = {};
+    int     mix_first_rx_id = -1;   // -1 = empty
+
     explicit NarrowCtx(AudioOut* audio)
         : receiver(
             [this](const ReceivedPacket& pkt) {
@@ -67,13 +74,34 @@ struct NarrowCtx {
             })
         , decoder(
             nullptr, // no part-update UI needed in locked mode
-            [this, audio](int /*rx_id*/, const int16_t* pcm, size_t n) {
+            [this, audio](int rx_id, const int16_t* pcm, size_t n) {
                 last_voice_ms.store(
                     std::chrono::duration_cast<std::chrono::milliseconds>(
                         Clock::now().time_since_epoch()).count(),
                     std::memory_order_relaxed);
-                if (audio)
-                    audio->push(pcm, n);
+                if (!audio || n != 80) {
+                    if (audio) audio->push(pcm, n);
+                    return;
+                }
+                if (mix_first_rx_id < 0) {
+                    // First contributor — hold it
+                    std::memcpy(mix_frame, pcm, 80 * sizeof(int16_t));
+                    mix_first_rx_id = rx_id;
+                } else if (rx_id != mix_first_rx_id) {
+                    // Second contributor — mix and flush
+                    for (int i = 0; i < 80; ++i) {
+                        int32_t m = static_cast<int32_t>(mix_frame[i])
+                                  + static_cast<int32_t>(pcm[i]);
+                        mix_frame[i] = static_cast<int16_t>(
+                            std::min(std::max(m, (int32_t)-32768), (int32_t)32767));
+                    }
+                    audio->push(mix_frame, 80);
+                    mix_first_rx_id = -1;
+                } else {
+                    // Same part again (other side silent) — flush old, hold new
+                    audio->push(mix_frame, 80);
+                    std::memcpy(mix_frame, pcm, 80 * sizeof(int16_t));
+                }
             })
     {}
 
